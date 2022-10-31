@@ -11,6 +11,8 @@ pub use validator::ValidatorCmd;
 pub use view::transaction_hashes::TransactionHashesCmd;
 pub use view::ViewCmd;
 
+use crate::opt::InitApp;
+
 // Note on display_order:
 //
 // The value is between 0 and 999 (the default).  Sorting of subcommands is done
@@ -23,6 +25,47 @@ pub use view::ViewCmd;
 // without noisy renumberings.
 //
 // https://docs.rs/clap/latest/clap/builder/struct.App.html#method.display_order
+
+#[derive(Debug, clap::Subcommand)]
+pub enum CommandRoot {
+    #[clap(flatten)]
+    Init(InitCommands),
+    #[clap(flatten)]
+    Offline(OfflineCommands),
+    #[clap(flatten)]
+    Online(OnlineCommands),
+}
+
+#[derive(Debug, clap::Subcommand)]
+pub enum InitCommands {
+    #[clap(subcommand, display_order = 300, visible_alias = "v")]
+    View(ViewCmd),
+    #[clap(subcommand, display_order = 500)]
+    Keys(KeysCmd),
+}
+
+#[derive(Debug, clap::Subcommand)]
+pub enum OfflineCommands {
+    #[clap(subcommand, display_order = 300, visible_alias = "v")]
+    View(ViewCmd),
+    /// Manage a validator.
+    #[clap(subcommand, display_order = 998)]
+    Validator(ValidatorCmd),
+}
+
+#[derive(Debug, clap::Subcommand)]
+pub enum OnlineCommands {
+    #[clap(subcommand, display_order = 200, visible_alias = "q")]
+    Query(QueryCmd),
+    /// View your private chain state, like account balances.
+    #[clap(subcommand, display_order = 300, visible_alias = "v")]
+    View(ViewCmd),
+    #[clap(subcommand, display_order = 400, visible_alias = "tx")]
+    Transaction(TxCmd),
+    /// Manage a validator.
+    #[clap(subcommand, display_order = 998)]
+    Validator(ValidatorCmd),
+}
 
 #[derive(Debug, clap::Subcommand)]
 pub enum Command {
@@ -56,6 +99,24 @@ impl Command {
             Command::Keys(cmd) => cmd.offline(),
             Command::Validator(cmd) => cmd.offline(),
             Command::Query(_) => false,
+        }
+    }
+}
+
+impl InitCommands {
+    pub fn exec(&self, app: InitApp) {
+        // The keys command takes the data dir directly, since it may need to
+        // create the client state, so handle it specially here so that we can have
+        // common code for the other subcommands.
+        if let InitCommands::Keys(keys_cmd) = &self {
+            keys_cmd.exec(app.data_path.as_path()).unwrap();
+            return;
+        }
+
+        // The view reset command takes the data dir directly, and should not be invoked when there's a
+        // view service running.
+        if let InitCommands::View(ViewCmd::Reset(reset)) = &self {
+            reset.exec(app.data_path.as_path()).unwrap();
         }
     }
 }

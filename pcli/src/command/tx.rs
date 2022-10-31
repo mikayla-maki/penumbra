@@ -159,7 +159,7 @@ impl TxCmd {
 
                 let plan = plan::send(
                     &app.fvk,
-                    app.view.as_mut().unwrap(),
+                    &mut app.view,
                     OsRng,
                     &values,
                     fee,
@@ -172,9 +172,7 @@ impl TxCmd {
             }
             TxCmd::Sweep => loop {
                 let specific_client = app.specific_client().await?;
-                let plans =
-                    plan::sweep(&app.fvk, app.view.as_mut().unwrap(), OsRng, specific_client)
-                        .await?;
+                let plans = plan::sweep(&app.fvk, &mut app.view, OsRng, specific_client).await?;
                 let num_plans = plans.len();
 
                 for (i, plan) in plans.into_iter().enumerate() {
@@ -206,7 +204,7 @@ impl TxCmd {
 
                 let swap_plan = plan::swap(
                     &app.fvk,
-                    app.view.as_mut().unwrap(),
+                    &mut app.view,
                     OsRng,
                     input,
                     into,
@@ -257,7 +255,7 @@ impl TxCmd {
                     .try_into()
                     .context("cannot parse batch swap output data")?;
 
-                let view_client: &mut dyn ViewClient = app.view.as_mut().unwrap();
+                let view_client: &mut dyn ViewClient = &mut app.view;
                 let asset_cache = view_client.assets().await?;
 
                 let pro_rata_outputs = output_data.pro_rata_outputs((
@@ -289,7 +287,7 @@ impl TxCmd {
 
                 let claim_plan = plan::swap_claim(
                     &app.fvk,
-                    app.view.as_mut().unwrap(),
+                    &mut app.view,
                     OsRng,
                     swap_plaintext,
                     swap_nft_record.note,
@@ -328,7 +326,7 @@ impl TxCmd {
 
                 let plan = plan::delegate(
                     &app.fvk,
-                    app.view.as_mut().unwrap(),
+                    &mut app.view,
                     OsRng,
                     rate_data,
                     unbonded_amount.into(),
@@ -377,7 +375,7 @@ impl TxCmd {
                 // first, split the input notes into exact change
                 let split_plan = plan::send(
                     &app.fvk,
-                    app.view.as_mut().unwrap(),
+                    &mut app.view,
                     OsRng,
                     &[delegation_value],
                     fee.clone(),
@@ -418,8 +416,6 @@ impl TxCmd {
                 // transaction)
                 let delegation_notes = vec![
                     app.view
-                        .as_mut()
-                        .unwrap()
                         .await_note_by_commitment(app.fvk.hash(), delegation_note_commitment)
                         .await?,
                 ];
@@ -427,7 +423,7 @@ impl TxCmd {
                 // now we can plan and submit an exact-change undelegation
                 let undelegate_plan = plan::undelegate(
                     &app.fvk,
-                    app.view.as_mut().unwrap(),
+                    &mut app.view,
                     OsRng,
                     rate_data,
                     delegation_notes,
@@ -447,15 +443,9 @@ impl TxCmd {
             TxCmd::Proposal(ProposalCmd::Submit { file, fee, source }) => {
                 let proposal: Proposal = serde_json::from_reader(File::open(&file)?)?;
                 let fee = Fee::from_staking_token_amount((*fee as u64).into());
-                let plan = plan::proposal_submit(
-                    &app.fvk,
-                    app.view.as_mut().unwrap(),
-                    OsRng,
-                    proposal,
-                    fee,
-                    *source,
-                )
-                .await?;
+                let plan =
+                    plan::proposal_submit(&app.fvk, &mut app.view, OsRng, proposal, fee, *source)
+                        .await?;
                 app.build_and_submit_transaction(plan).await?;
             }
             TxCmd::Proposal(ProposalCmd::Withdraw {
@@ -488,7 +478,7 @@ impl TxCmd {
                 let fee = Fee::from_staking_token_amount((*fee as u64).into());
                 let plan = plan::proposal_withdraw(
                     &app.fvk,
-                    app.view.as_mut().unwrap(),
+                    &mut app.view,
                     OsRng,
                     *proposal_id,
                     deposit_refund_address,

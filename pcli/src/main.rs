@@ -1,12 +1,13 @@
 // Rust analyzer complains without this (but rustc is happy regardless)
 #![recursion_limit = "256"]
 #![allow(clippy::clone_on_copy)]
-use std::fs;
 
-use anyhow::{Context, Result};
+use anyhow::Result;
+
 use clap::Parser;
 use futures::StreamExt;
 use penumbra_crypto::FullViewingKey;
+
 use penumbra_proto::{
     custody::v1alpha1::custody_protocol_client::CustodyProtocolClient,
     view::v1alpha1::view_protocol_client::ViewProtocolClient,
@@ -32,10 +33,7 @@ const VIEW_FILE_NAME: &str = "pcli-view.sqlite";
 
 #[derive(Debug)]
 pub struct App {
-    /// view will be `None` when a command indicates that it can be run offline via
-    /// `.offline()` and Some(_) otherwise. Assuming `.offline()` has been implemenented
-    /// correctly, this can be unwrapped safely.
-    pub view: Option<ViewProtocolClient<BoxGrpcService>>,
+    pub view: ViewProtocolClient<BoxGrpcService>,
     pub custody: CustodyProtocolClient<BoxGrpcService>,
     pub fvk: FullViewingKey,
     pub wallet: KeyStore,
@@ -45,12 +43,11 @@ pub struct App {
 
 impl App {
     pub fn view(&mut self) -> &mut impl ViewClient {
-        self.view.as_mut().unwrap()
+        &mut self.view
     }
 
     async fn sync(&mut self) -> Result<()> {
-        let mut status_stream =
-            ViewClient::status_stream(self.view.as_mut().unwrap(), self.fvk.hash()).await?;
+        let mut status_stream = ViewClient::status_stream(&mut self.view, self.fvk.hash()).await?;
 
         // Pull out the first message from the stream, which has the current state, and use
         // it to set up a progress bar.
@@ -87,59 +84,34 @@ impl App {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    // Display a warning message to the user so they don't get upset when all their tokens are lost.
-    if std::env::var("PCLI_UNLEASH_DANGER").is_err() {
-        warning::display();
-    }
+    let opt = Opt::parse();
 
-    let mut opt = Opt::parse();
+    let (pre_init_app, cmd) = opt.into_init_app()?;
 
-    // Initialize tracing here, rather than when converting into an `App`, so
-    // that tracing is set up even for wallet commands that don't build the `App`.
-    opt.init_tracing();
-
-    //Ensure that the data_path exists, in case this is a cold start
-    fs::create_dir_all(&opt.data_path)
-        .with_context(|| format!("Failed to create data directory {}", opt.data_path))?;
-
-    // The keys command takes the data dir directly, since it may need to
-    // create the client state, so handle it specially here so that we can have
-    // common code for the other subcommands.
-    if let Command::Keys(keys_cmd) = &opt.cmd {
-        keys_cmd.exec(opt.data_path.as_path())?;
+    if let CommandRoot::Init(init_commands) = &cmd {
+        init_commands.exec(pre_init_app);
         return Ok(());
     }
 
-    // The view reset command takes the data dir directly, and should not be invoked when there's a
-    // view service running.
-    if let Command::View(ViewCmd::Reset(reset)) = &opt.cmd {
-        reset.exec(opt.data_path.as_path())?;
-        return Ok(());
-    }
+    let offline_app = pre_init_app.into_offline_app()?;
 
-    let (mut app, cmd) = opt.into_app().await?;
+    // Run offline_app commands
 
-    if !cmd.offline() {
-        app.sync().await?;
-    }
+    let app = offline_app.into_app().await?;
 
-    // TODO: this is a mess, figure out the right way to bundle up the clients + fvk
-    // make sure to be compatible with client for remote view service, with different
-    // concrete type
+    // match &cmd {
+    //     Command::Keys(_) => unreachable!("wallet command already executed"),
+    //     Command::Transaction(tx_cmd) => tx_cmd.exec(&mut app).await?,
+    //     Command::View(view_cmd) => {
+    //         let mut oblivious_client = app.oblivious_client().await?;
 
-    match &cmd {
-        Command::Keys(_) => unreachable!("wallet command already executed"),
-        Command::Transaction(tx_cmd) => tx_cmd.exec(&mut app).await?,
-        Command::View(view_cmd) => {
-            let mut oblivious_client = app.oblivious_client().await?;
-
-            view_cmd
-                .exec(&app.fvk, app.view.as_mut(), &mut oblivious_client)
-                .await?
-        }
-        Command::Validator(cmd) => cmd.exec(&mut app).await?,
-        Command::Query(cmd) => cmd.exec(&mut app).await?,
-    }
+    //         view_cmd
+    //             .exec(&app.fvk, Some(&mut app.view), &mut oblivious_client)
+    //             .await?
+    //     }
+    //     Command::Validator(cmd) => cmd.exec(&mut app).await?,
+    //     Command::Query(cmd) => cmd.exec(&mut app).await?,
+    // }
 
     Ok(())
 }
