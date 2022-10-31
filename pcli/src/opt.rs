@@ -10,6 +10,7 @@ use directories::ProjectDirs;
 use penumbra_crypto::FullViewingKey;
 use penumbra_custody::SoftHSM;
 use penumbra_proto::{
+    client::v1alpha1::oblivious_query_client::ObliviousQueryClient,
     custody::v1alpha1::{
         custody_protocol_client::CustodyProtocolClient,
         custody_protocol_server::CustodyProtocolServer,
@@ -21,6 +22,7 @@ use penumbra_proto::{
 use penumbra_view::ViewService;
 use penumbra_wallet::KeyStore;
 use std::{fs, net::SocketAddr};
+use tonic::transport::Channel;
 use tracing_subscriber::EnvFilter;
 use url::{Host, Url};
 
@@ -123,32 +125,6 @@ impl InitApp {
 
         let fvk = wallet.spend_key.full_viewing_key().clone();
 
-        Ok(OfflineApp {
-            custody,
-            fvk,
-            wallet,
-            node: self.node,
-            data_path: self.data_path,
-            view_address: self.view_address,
-            pd_port: self.pd_port,
-            tendermint_port: self.tendermint_port,
-        })
-    }
-}
-
-pub struct OfflineApp {
-    data_path: Utf8PathBuf,
-    custody: CustodyProtocolClient<BoxGrpcService>,
-    fvk: FullViewingKey,
-    wallet: KeyStore,
-    view_address: Option<SocketAddr>,
-    node: Host,
-    pd_port: u16,
-    tendermint_port: u16,
-}
-
-impl OfflineApp {
-    pub async fn into_app(self) -> Result<App> {
         // Parse urls
         let mut tendermint_url = format!("http://{}", self.node)
             .parse::<Url>()
@@ -162,9 +138,39 @@ impl OfflineApp {
             .set_port(Some(self.tendermint_port))
             .expect("tendermint URL will not be `file://`");
 
-        let mut app = App {
+        Ok(OfflineApp {
+            custody,
+            fvk,
+            wallet,
             pd_url,
             tendermint_url,
+            node: self.node,
+            data_path: self.data_path,
+            view_address: self.view_address,
+            pd_port: self.pd_port,
+            tendermint_port: self.tendermint_port,
+        })
+    }
+}
+
+pub struct OfflineApp {
+    pub data_path: Utf8PathBuf,
+    pub custody: CustodyProtocolClient<BoxGrpcService>,
+    pub fvk: FullViewingKey,
+    pub wallet: KeyStore,
+    pub view_address: Option<SocketAddr>,
+    pub node: Host,
+    pub pd_port: u16,
+    pub tendermint_port: u16,
+    pub pd_url: Url,
+    tendermint_url: Url,
+}
+
+impl OfflineApp {
+    pub async fn into_app(self) -> Result<App> {
+        let mut app = App {
+            pd_url: self.pd_url.clone(),
+            tendermint_url: self.tendermint_url.clone(),
             view: self.view_client(&self.fvk).await?,
             custody: self.custody,
             fvk: self.fvk,
@@ -174,6 +180,12 @@ impl OfflineApp {
         app.sync();
 
         Ok(app)
+    }
+
+    pub async fn oblivious_client(&self) -> Result<ObliviousQueryClient<Channel>, anyhow::Error> {
+        ObliviousQueryClient::connect(self.pd_url.as_ref().to_owned())
+            .await
+            .map_err(Into::into)
     }
 
     /// Constructs a [`ViewProtocolClient`] based on the command-line options.

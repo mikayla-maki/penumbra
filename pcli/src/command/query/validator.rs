@@ -5,7 +5,9 @@ use comfy_table::{presets, Table};
 use futures::TryStreamExt;
 use penumbra_component::stake::validator;
 use penumbra_crypto::IdentityKey;
-use penumbra_proto::client::v1alpha1::ValidatorInfoRequest;
+use penumbra_proto::client::v1alpha1::{
+    oblivious_query_client::ObliviousQueryClient, ValidatorInfoRequest,
+};
 
 use crate::App;
 
@@ -32,14 +34,15 @@ pub enum ValidatorCmd {
 }
 
 impl ValidatorCmd {
-    pub async fn exec(&self, app: &mut App) -> Result<()> {
+    pub async fn exec(
+        &self,
+        mut client: ObliviousQueryClient<tonic::transport::Channel>,
+    ) -> Result<()> {
         match self {
             ValidatorCmd::List {
                 show_inactive,
                 detailed,
             } => {
-                let mut client = app.oblivious_client().await?;
-
                 let mut validators = client
                     .validator_info(ValidatorInfoRequest {
                         show_inactive: *show_inactive,
@@ -170,9 +173,7 @@ impl ValidatorCmd {
                 status.state.
                 */
 
-                // Intsead just download everything
-                let mut client = app.oblivious_client().await?;
-
+                // Instead just download everything
                 let validators = client
                     .validator_info(ValidatorInfoRequest {
                         show_inactive: true,

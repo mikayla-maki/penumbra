@@ -88,16 +88,24 @@ async fn main() -> Result<()> {
 
     let (pre_init_app, cmd) = opt.into_init_app()?;
 
-    if let CommandRoot::Init(init_commands) = &cmd {
-        init_commands.exec(pre_init_app);
-        return Ok(());
+    match &cmd {
+        CommandRoot::Init(init_commands) => {
+            init_commands.exec(pre_init_app)?;
+            Ok(())
+        }
+        CommandRoot::Offline(offline_commands) => {
+            let offline_app = pre_init_app.into_offline_app()?;
+            offline_commands.exec(offline_app).await?;
+            Ok(())
+        }
+        CommandRoot::Online(online_commands) => {
+            let offline_app = pre_init_app.into_offline_app()?;
+            let app = offline_app.into_app().await?;
+            online_commands.exec(app);
+
+            Ok(())
+        }
     }
-
-    let offline_app = pre_init_app.into_offline_app()?;
-
-    // Run offline_app commands
-
-    let app = offline_app.into_app().await?;
 
     // match &cmd {
     //     Command::Keys(_) => unreachable!("wallet command already executed"),
@@ -112,6 +120,4 @@ async fn main() -> Result<()> {
     //     Command::Validator(cmd) => cmd.exec(&mut app).await?,
     //     Command::Query(cmd) => cmd.exec(&mut app).await?,
     // }
-
-    Ok(())
 }
