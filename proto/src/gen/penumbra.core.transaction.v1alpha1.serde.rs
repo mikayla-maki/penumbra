@@ -4043,6 +4043,12 @@ impl serde::Serialize for TransactionBody {
         if self.encrypted_memo.is_some() {
             len += 1;
         }
+        if self.valid_before != 0 {
+            len += 1;
+        }
+        if self.valid_after != 0 {
+            len += 1;
+        }
         let mut struct_ser = serializer.serialize_struct("penumbra.core.transaction.v1alpha1.TransactionBody", len)?;
         if !self.actions.is_empty() {
             struct_ser.serialize_field("actions", &self.actions)?;
@@ -4061,6 +4067,12 @@ impl serde::Serialize for TransactionBody {
         }
         if let Some(v) = self.encrypted_memo.as_ref() {
             struct_ser.serialize_field("encryptedMemo", pbjson::private::base64::encode(&v).as_str())?;
+        }
+        if self.valid_before != 0 {
+            struct_ser.serialize_field("validBefore", ToString::to_string(&self.valid_before).as_str())?;
+        }
+        if self.valid_after != 0 {
+            struct_ser.serialize_field("validAfter", ToString::to_string(&self.valid_after).as_str())?;
         }
         struct_ser.end()
     }
@@ -4082,6 +4094,10 @@ impl<'de> serde::Deserialize<'de> for TransactionBody {
             "fmdClues",
             "encrypted_memo",
             "encryptedMemo",
+            "valid_before",
+            "validBefore",
+            "valid_after",
+            "validAfter",
         ];
 
         #[allow(clippy::enum_variant_names)]
@@ -4092,6 +4108,8 @@ impl<'de> serde::Deserialize<'de> for TransactionBody {
             Fee,
             FmdClues,
             EncryptedMemo,
+            ValidBefore,
+            ValidAfter,
         }
         impl<'de> serde::Deserialize<'de> for GeneratedField {
             fn deserialize<D>(deserializer: D) -> std::result::Result<GeneratedField, D::Error>
@@ -4119,6 +4137,8 @@ impl<'de> serde::Deserialize<'de> for TransactionBody {
                             "fee" => Ok(GeneratedField::Fee),
                             "fmdClues" | "fmd_clues" => Ok(GeneratedField::FmdClues),
                             "encryptedMemo" | "encrypted_memo" => Ok(GeneratedField::EncryptedMemo),
+                            "validBefore" | "valid_before" => Ok(GeneratedField::ValidBefore),
+                            "validAfter" | "valid_after" => Ok(GeneratedField::ValidAfter),
                             _ => Err(serde::de::Error::unknown_field(value, FIELDS)),
                         }
                     }
@@ -4144,6 +4164,8 @@ impl<'de> serde::Deserialize<'de> for TransactionBody {
                 let mut fee__ = None;
                 let mut fmd_clues__ = None;
                 let mut encrypted_memo__ = None;
+                let mut valid_before__ = None;
+                let mut valid_after__ = None;
                 while let Some(k) = map.next_key()? {
                     match k {
                         GeneratedField::Actions => {
@@ -4186,6 +4208,22 @@ impl<'de> serde::Deserialize<'de> for TransactionBody {
                                 map.next_value::<::std::option::Option<::pbjson::private::BytesDeserialize<_>>>()?.map(|x| x.0)
                             ;
                         }
+                        GeneratedField::ValidBefore => {
+                            if valid_before__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("validBefore"));
+                            }
+                            valid_before__ = 
+                                Some(map.next_value::<::pbjson::private::NumberDeserialize<_>>()?.0)
+                            ;
+                        }
+                        GeneratedField::ValidAfter => {
+                            if valid_after__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("validAfter"));
+                            }
+                            valid_after__ = 
+                                Some(map.next_value::<::pbjson::private::NumberDeserialize<_>>()?.0)
+                            ;
+                        }
                     }
                 }
                 Ok(TransactionBody {
@@ -4195,6 +4233,8 @@ impl<'de> serde::Deserialize<'de> for TransactionBody {
                     fee: fee__,
                     fmd_clues: fmd_clues__.unwrap_or_default(),
                     encrypted_memo: encrypted_memo__,
+                    valid_before: valid_before__.unwrap_or_default(),
+                    valid_after: valid_after__.unwrap_or_default(),
                 })
             }
         }
@@ -4355,6 +4395,12 @@ impl serde::Serialize for TransactionPlan {
         if self.memo_plan.is_some() {
             len += 1;
         }
+        if self.valid_before != 0 {
+            len += 1;
+        }
+        if self.valid_after != 0 {
+            len += 1;
+        }
         let mut struct_ser = serializer.serialize_struct("penumbra.core.transaction.v1alpha1.TransactionPlan", len)?;
         if !self.actions.is_empty() {
             struct_ser.serialize_field("actions", &self.actions)?;
@@ -4373,6 +4419,12 @@ impl serde::Serialize for TransactionPlan {
         }
         if let Some(v) = self.memo_plan.as_ref() {
             struct_ser.serialize_field("memoPlan", v)?;
+        }
+        if self.valid_before != 0 {
+            struct_ser.serialize_field("validBefore", ToString::to_string(&self.valid_before).as_str())?;
+        }
+        if self.valid_after != 0 {
+            struct_ser.serialize_field("validAfter", ToString::to_string(&self.valid_after).as_str())?;
         }
         struct_ser.end()
     }
@@ -4394,6 +4446,10 @@ impl<'de> serde::Deserialize<'de> for TransactionPlan {
             "cluePlans",
             "memo_plan",
             "memoPlan",
+            "valid_before",
+            "validBefore",
+            "valid_after",
+            "validAfter",
         ];
 
         #[allow(clippy::enum_variant_names)]
@@ -4404,6 +4460,8 @@ impl<'de> serde::Deserialize<'de> for TransactionPlan {
             Fee,
             CluePlans,
             MemoPlan,
+            ValidBefore,
+            ValidAfter,
         }
         impl<'de> serde::Deserialize<'de> for GeneratedField {
             fn deserialize<D>(deserializer: D) -> std::result::Result<GeneratedField, D::Error>
@@ -4431,6 +4489,8 @@ impl<'de> serde::Deserialize<'de> for TransactionPlan {
                             "fee" => Ok(GeneratedField::Fee),
                             "cluePlans" | "clue_plans" => Ok(GeneratedField::CluePlans),
                             "memoPlan" | "memo_plan" => Ok(GeneratedField::MemoPlan),
+                            "validBefore" | "valid_before" => Ok(GeneratedField::ValidBefore),
+                            "validAfter" | "valid_after" => Ok(GeneratedField::ValidAfter),
                             _ => Err(serde::de::Error::unknown_field(value, FIELDS)),
                         }
                     }
@@ -4456,6 +4516,8 @@ impl<'de> serde::Deserialize<'de> for TransactionPlan {
                 let mut fee__ = None;
                 let mut clue_plans__ = None;
                 let mut memo_plan__ = None;
+                let mut valid_before__ = None;
+                let mut valid_after__ = None;
                 while let Some(k) = map.next_key()? {
                     match k {
                         GeneratedField::Actions => {
@@ -4496,6 +4558,22 @@ impl<'de> serde::Deserialize<'de> for TransactionPlan {
                             }
                             memo_plan__ = map.next_value()?;
                         }
+                        GeneratedField::ValidBefore => {
+                            if valid_before__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("validBefore"));
+                            }
+                            valid_before__ = 
+                                Some(map.next_value::<::pbjson::private::NumberDeserialize<_>>()?.0)
+                            ;
+                        }
+                        GeneratedField::ValidAfter => {
+                            if valid_after__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("validAfter"));
+                            }
+                            valid_after__ = 
+                                Some(map.next_value::<::pbjson::private::NumberDeserialize<_>>()?.0)
+                            ;
+                        }
                     }
                 }
                 Ok(TransactionPlan {
@@ -4505,6 +4583,8 @@ impl<'de> serde::Deserialize<'de> for TransactionPlan {
                     fee: fee__,
                     clue_plans: clue_plans__.unwrap_or_default(),
                     memo_plan: memo_plan__,
+                    valid_before: valid_before__.unwrap_or_default(),
+                    valid_after: valid_after__.unwrap_or_default(),
                 })
             }
         }
@@ -4537,6 +4617,12 @@ impl serde::Serialize for TransactionView {
         if self.memo.is_some() {
             len += 1;
         }
+        if self.valid_before != 0 {
+            len += 1;
+        }
+        if self.valid_after != 0 {
+            len += 1;
+        }
         let mut struct_ser = serializer.serialize_struct("penumbra.core.transaction.v1alpha1.TransactionView", len)?;
         if !self.action_views.is_empty() {
             struct_ser.serialize_field("actionViews", &self.action_views)?;
@@ -4555,6 +4641,12 @@ impl serde::Serialize for TransactionView {
         }
         if let Some(v) = self.memo.as_ref() {
             struct_ser.serialize_field("memo", pbjson::private::base64::encode(&v).as_str())?;
+        }
+        if self.valid_before != 0 {
+            struct_ser.serialize_field("validBefore", ToString::to_string(&self.valid_before).as_str())?;
+        }
+        if self.valid_after != 0 {
+            struct_ser.serialize_field("validAfter", ToString::to_string(&self.valid_after).as_str())?;
         }
         struct_ser.end()
     }
@@ -4576,6 +4668,10 @@ impl<'de> serde::Deserialize<'de> for TransactionView {
             "fmd_clues",
             "fmdClues",
             "memo",
+            "valid_before",
+            "validBefore",
+            "valid_after",
+            "validAfter",
         ];
 
         #[allow(clippy::enum_variant_names)]
@@ -4586,6 +4682,8 @@ impl<'de> serde::Deserialize<'de> for TransactionView {
             Fee,
             FmdClues,
             Memo,
+            ValidBefore,
+            ValidAfter,
         }
         impl<'de> serde::Deserialize<'de> for GeneratedField {
             fn deserialize<D>(deserializer: D) -> std::result::Result<GeneratedField, D::Error>
@@ -4613,6 +4711,8 @@ impl<'de> serde::Deserialize<'de> for TransactionView {
                             "fee" => Ok(GeneratedField::Fee),
                             "fmdClues" | "fmd_clues" => Ok(GeneratedField::FmdClues),
                             "memo" => Ok(GeneratedField::Memo),
+                            "validBefore" | "valid_before" => Ok(GeneratedField::ValidBefore),
+                            "validAfter" | "valid_after" => Ok(GeneratedField::ValidAfter),
                             _ => Err(serde::de::Error::unknown_field(value, FIELDS)),
                         }
                     }
@@ -4638,6 +4738,8 @@ impl<'de> serde::Deserialize<'de> for TransactionView {
                 let mut fee__ = None;
                 let mut fmd_clues__ = None;
                 let mut memo__ = None;
+                let mut valid_before__ = None;
+                let mut valid_after__ = None;
                 while let Some(k) = map.next_key()? {
                     match k {
                         GeneratedField::ActionViews => {
@@ -4680,6 +4782,22 @@ impl<'de> serde::Deserialize<'de> for TransactionView {
                                 map.next_value::<::std::option::Option<::pbjson::private::BytesDeserialize<_>>>()?.map(|x| x.0)
                             ;
                         }
+                        GeneratedField::ValidBefore => {
+                            if valid_before__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("validBefore"));
+                            }
+                            valid_before__ = 
+                                Some(map.next_value::<::pbjson::private::NumberDeserialize<_>>()?.0)
+                            ;
+                        }
+                        GeneratedField::ValidAfter => {
+                            if valid_after__.is_some() {
+                                return Err(serde::de::Error::duplicate_field("validAfter"));
+                            }
+                            valid_after__ = 
+                                Some(map.next_value::<::pbjson::private::NumberDeserialize<_>>()?.0)
+                            ;
+                        }
                     }
                 }
                 Ok(TransactionView {
@@ -4689,6 +4807,8 @@ impl<'de> serde::Deserialize<'de> for TransactionView {
                     fee: fee__,
                     fmd_clues: fmd_clues__.unwrap_or_default(),
                     memo: memo__,
+                    valid_before: valid_before__.unwrap_or_default(),
+                    valid_after: valid_after__.unwrap_or_default(),
                 })
             }
         }
